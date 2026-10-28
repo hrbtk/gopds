@@ -29,6 +29,22 @@
                     </svg>
                 </button>
                 <button id="auth-btn" class="auth-button" type="button">Admin Login</button>
+
+                <!-- Floating Modal -->
+                <div id="auth-modal" class="auth-modal-overlay">
+                    <div class="auth-modal-content">
+                        <button class="auth-modal-close" onclick="document.getElementById('auth-modal').style.display = 'none';">&times;</button>
+
+                        <form id="auth-form">
+                            <h2>Admin Login</h2>
+                            <input type="text" id="username" name="username" placeholder="Username" autocomplete="username" required />
+
+                            <input type="password" id="password" name="password" placeholder="Password" autocomplete="current-password" required />
+
+                            <button type="submit" id="auth-submit-btn">Login</button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="browse-row">

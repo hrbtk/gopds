@@ -75,6 +75,10 @@ const App = {
         rebuildBtn: document.getElementById('rebuild-btn'),
         rebuildStatus: document.getElementById('rebuild-status'),
         authBtn: document.getElementById('auth-btn'),
+        authModal: document.getElementById('auth-modal'),
+        authForm: document.getElementById('auth-form'),
+        usernameInput: document.getElementById('username'),
+        passwordInput: document.getElementById('password'),
         authStatus: document.getElementById('auth-status'),
         reviewBtn: document.getElementById('review-btn'),
         groupSeriesToggle: document.getElementById('group-series')
@@ -187,6 +191,9 @@ const App = {
             this.expandedSeries = {};
             this.render(true);
         });
+
+        this.ui.authBtn.addEventListener('click', () => this.handleAuthClick());
+        this.ui.authForm.addEventListener('submit', (e) => this.handleFormSubmit(e));
 
         this.ui.library.addEventListener('click', (e) => this.handleLibraryClick(e));
 
@@ -508,40 +515,71 @@ const App = {
                 console.error(err);
             }
             await this.syncAuthStatus();
+            // Close modal if it was open
+            this.ui.authModal.style.display = 'none';
             return;
         }
 
-        const usernameInput = window.prompt('Username', 'admin');
-        if (usernameInput === null) {
-            return;
+        // If not authenticated, show the modal
+        if (this.ui.authModal) {
+            this.ui.authModal.style.display = 'flex';
+            this.ui.usernameInput.focus();
         }
-        const passwordInput = window.prompt('Password');
-        if (passwordInput === null) {
-            return;
-        }
+  },
 
-        this.ui.authStatus.textContent = 'Signing in...';
-        try {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: usernameInput.trim() || 'admin',
-                    password: passwordInput
-                })
-            });
-            if (!response.ok) {
-                const msg = await response.text();
-                throw new Error(msg || `Login failed (${response.status})`);
-            }
-            await this.syncAuthStatus();
-        } catch (err) {
-            this.ui.authStatus.textContent = `Login failed: ${err.message}`;
-            console.error(err);
-        }
-    },
+  async handleFormSubmit(e) {
+      e.preventDefault(); // Prevent page reload
 
-    startRebuildPolling() {
+      // Get values
+      const usernameInput = this.ui.usernameInput.value.trim() || 'admin';
+      const passwordInput = this.ui.passwordInput.value;
+
+      this.ui.authStatus.textContent = 'Signing in...';
+      this.ui.authStatus.style.color = 'red'; // Reset color
+
+      // Optional: Disable inputs during loading
+      this.ui.usernameInput.disabled = true;
+      this.ui.passwordInput.disabled = true;
+      this.ui.authForm.querySelector('button').disabled = true;
+
+      try {
+          const response = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  username: usernameInput,
+                  password: passwordInput
+              })
+          });
+
+          if (!response.ok) {
+              const msg = await response.text();
+              throw new Error(msg || `Login failed (${response.status})`);
+          }
+
+          await this.syncAuthStatus();
+          this.ui.authStatus.textContent = 'Success!';
+          this.ui.authStatus.style.color = 'green';
+
+          // Close modal on success
+          setTimeout(() => {
+              this.ui.authModal.style.display = 'none';
+              this.ui.authForm.reset();
+          }, 1000);
+
+      } catch (err) {
+          this.ui.authStatus.textContent = `Login failed: ${err.message}`;
+          this.ui.authStatus.style.color = 'red';
+          console.error(err);
+      } finally {
+          // Re-enable inputs
+          this.ui.usernameInput.disabled = false;
+          this.ui.passwordInput.disabled = false;
+          this.ui.authForm.querySelector('button').disabled = false;
+      }
+  },
+
+  startRebuildPolling() {
         if (this.rebuildPollTimer) {
             return;
         }
